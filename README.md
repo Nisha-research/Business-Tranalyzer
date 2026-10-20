@@ -1,118 +1,90 @@
 # Business Tranalyzer
 
-Business Tranalyzer is a browser-based business expense and transaction tracking application built with HTML, CSS, and JavaScript.
-
-It helps users record income and expenses, monitor balances, track pending payments, visualize financial data, and generate basic business forecasts.
-
-## Live deployment
-
-After GitHub Pages is enabled, the application will be available from the repository's **Settings → Pages** section.
-
-The application starts from `index.html` and opens the main tracker.
+Business Tranalyzer is a static, browser-based expense and transaction tracker built with HTML, CSS, and vanilla JavaScript. It helps track business income/expenses, review charts, and view a forecasting dashboard without any backend service.
 
 ## Features
 
-- Add income and expense transactions.
-- Track total balance, income, expenses, and pending amounts.
-- Categorize transactions by vendor or store.
-- Add dates, due dates, invoice numbers, and product or bill IDs.
-- Mark transactions as paid or pending.
-- Support INR, USD, and EUR currencies.
-- Add recurring transactions:
-  - Weekly
-  - Monthly
-  - Quarterly
-  - Yearly
-  - Custom intervals
-- Edit and delete transactions.
-- Undo recently deleted transactions.
-- Filter transactions by:
-  - All
-  - Income
-  - Expense
-- Import transactions from CSV files.
-- Export transactions to CSV files.
-- Attach receipts or invoices.
-- View bar and pie charts.
-- Open a detailed analytics dashboard.
-- Compare income and expenses over time.
-- Review category-based spending.
-- Generate simple forecast projections.
-- Store data locally in the browser.
-- Responsive layout for desktop, tablet, and mobile devices.
+- Add, edit, delete, and undo transactions
+- Track totals: balance, income, expenses, and pending amounts
+- Vendor/category, invoice, product/bill, due-date, and status tracking
+- Recurring transactions (weekly, monthly, quarterly, yearly, custom interval)
+- Attachment support (receipt/invoice file preview with size limits)
+- Filtered transaction views
+- CSV import/export for backup and restore workflows
+- Chart views in tracker + full analytics/forecast dashboard
+- Dashboard navigation state passed via `sessionStorage`
 
-## Project files
+## Project structure
 
-| File | Description |
-| --- | --- |
-| `index.html` | GitHub Pages entry point. |
-| `expense-tracker.html` | Main transaction tracker interface. |
-| `expense-style.css` | Application styling and responsive layout. |
-| `expense-script.js` | Transaction logic, storage, CSV handling, attachments, and charts. |
-| `dashboard.html` | Analytics and forecast dashboard. |
-| `.github/workflows/deploy-pages.yml` | GitHub Pages deployment workflow. |
+```text
+Business-Tranalyzer/
+├── index.html
+├── expense-tracker.html
+├── expense-style.css
+├── expense-script.js
+├── dashboard.html
+├── assets/
+│   └── favicon.svg
+└── .github/workflows/
+    └── deploy-pages.yml
+```
 
-## Running locally
+## Entry point
 
-This project does not require a build process.
+- Production entry point: `index.html`
+- `index.html` redirects to `expense-tracker.html` using a relative URL suitable for GitHub Pages project paths.
 
-Run a local server from the repository directory:
+## Run locally
+
+No build step is required.
 
 ```bash
 python -m http.server 8000
 ```
 
-Then open:
+Open:
 
 ```text
 http://localhost:8000/
 ```
 
-## Technology stack
+## Data storage, privacy, and limitations
 
-- HTML5
-- CSS3
-- Vanilla JavaScript
-- Chart.js
-- Papa Parse
-- GitHub Actions
-- GitHub Pages
+- Transaction data is stored in browser `localStorage`.
+- Temporary dashboard handoff state is stored in `sessionStorage`.
+- There is no backend, account system, authentication, or external database.
+- Data stays on the current browser profile/device.
+- Clearing browser/site data or switching devices will not transfer existing transactions.
+- Use CSV export regularly to keep backups.
 
-## Data storage
+## Backup guidance
 
-Business Tranalyzer stores transaction information in the browser using `localStorage` and `sessionStorage`.
+- Use **Export CSV** to back up your transactions.
+- Keep exported files in a safe location.
+- Use **Import CSV** to restore data in the same or a different browser/device.
 
-There is currently no backend database or user account system. Data may be lost if browser storage is cleared or if the application is opened on another device.
+## GitHub Pages deployment
 
-Use the CSV export feature to create backups of important transaction data.
+This repository includes `.github/workflows/deploy-pages.yml` for static Pages deployment (no build step).
 
-## Forecasting
+### Workflow behavior
 
-The dashboard provides a lightweight forecast based on historical transaction values, average values, trend calculations, standard deviation, and present-data adjustments.
+- Triggers on pushes to `main`
+- Supports manual `workflow_dispatch`
+- Uses official GitHub Pages actions:
+  - `actions/configure-pages`
+  - `actions/upload-pages-artifact`
+  - `actions/deploy-pages`
 
-Forecast results are estimates and should not be treated as financial advice.
+### One-time repository setup
 
-## Deployment
+1. Go to **Settings → Pages** in this repository.
+2. Set **Source** to **GitHub Actions**.
+3. Push to `main` (or run the workflow manually from the **Actions** tab).
+4. Wait for **Deploy to GitHub Pages** to complete successfully.
+5. Open the published URL shown in the workflow run.
 
-The GitHub Actions workflow deploys the project to GitHub Pages whenever changes are pushed to the `main` branch.
+## Notes
 
-To enable deployment:
-
-1. Open the repository on GitHub.
-2. Go to **Settings**.
-3. Select **Pages**.
-4. Set the source to **GitHub Actions**.
-5. Open the **Actions** tab.
-6. Confirm that the **Deploy to GitHub Pages** workflow completes successfully.
-
-## Limitations
-
-- Data is stored only in the browser.
-- There is no authentication system.
-- There is no server-side synchronization.
-- Forecast results are estimates.
-- Chart.js and Papa Parse are loaded from external CDNs.
-
-## License
-
-No license has been added to this repository yet.
+- This is a client-side application; forecast output is informational and not financial advice.
+- Chart.js and Papa Parse are loaded from CDN.
