@@ -91,4 +91,4 @@ To enable deployment:
 
 ## License
 
-No license has been specified for this repository.
+This project is licensed under the [MIT License](LICENSE).
