@@ -1,0 +1,440 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.app-tabs{display:flex; gap:8px; margin-bottom:12px}
+.app-tab{padding:10px 14px;background:linear-gradient(135deg,#f4f6ff 0%, #ffffff 100%);border-radius:12px;cursor:pointer;transition:transform 180ms cubic-bezier(.2,.9,.3,1),box-shadow 180ms cubic-bezier(.2,.9,.3,1);font-weight:600;color:#334155;border:1px solid rgba(0,0,0,0.02)}
+.app-tab.active{background:linear-gradient(90deg,#5669f3,#7c9bff);color:#fff;transform:translateY(-4px) scale(1.02);box-shadow:0 10px 28px rgba(86,105,243,0.22)}
+
+.chart-subtabs{display:flex; gap:8px; margin-top:12px}
+.chart-subtab{padding:6px 10px;border-radius:6px;border:1px solid #e5e7eb;cursor:pointer}
+.chart-subtab.active{background:#667eea;color:white}
+
+header {
+    text-align: center;
+    color: white;
+    margin-bottom: 40px;
+    padding: 20px;
+}
+
+header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.subtitle {
+    font-size: 1.1rem;
+    opacity: 0.95;
+}
+
+.balance-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.balance-card {
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+}
+
+.balance-card:hover {
+    transform: translateY(-5px);
+}
+
+.balance-card h3 {
+    color: #666;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+}
+
+.balance-card .amount {
+    font-size: 2rem;
+    font-weight: bold;
+    margin: 0;
+}
+
+.total-balance .amount {
+    color: #667eea;
+}
+
+.income .amount {
+    color: #10b981;
+}
+
+.expense .amount {
+    color: #ef4444;
+}
+
+.main-content {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 30px;
+    margin-bottom: 30px;
+}
+
+@media (max-width: 968px) {
+    .main-content {
+        grid-template-columns: 1fr;
+    }
+}
+
+.form-section,
+.transactions-section {
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.form-section h2,
+.transactions-section h2 {
+    color: #333;
+    margin-bottom: 20px;
+    font-size: 1.5rem;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.vendor-chip{display:inline-flex;gap:8px;align-items:center;padding:6px 10px;background:#eef2ff;border-radius:999px;color:#334155;font-weight:600}
+.overdue-badge{background:#ff6b6b;color:#fff;padding:4px 8px;border-radius:8px;font-size:0.8rem;font-weight:700}
+.due-soon{background:#ffebcc;color:#7c3f00;padding:4px 8px;border-radius:8px;font-size:0.8rem;font-weight:700}
+.attachment-preview{display:flex;gap:10px;align-items:center;margin-top:8px}
+.attachment-thumb{width:48px;height:48px;border-radius:6px;object-fit:cover;border:1px solid #e5e7eb}
+.recurring-pill{background:#e6f4ff;color:#0369a1;padding:4px 8px;border-radius:8px;font-size:0.8rem}
+
+.form-group label {
+    display: block;
+    color: #555;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    width: 100%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-danger {
+    background: #ef4444;
+    color: white;
+    width: 100%;
+}
+
+.btn-danger:hover {
+    background: #dc2626;
+}
+
+.transactions-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.filter-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.filter-btn {
+    padding: 8px 16px;
+    border: 2px solid #e5e7eb;
+    background: white;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.filter-btn:hover {
+    border-color: #667eea;
+    color: #667eea;
+}
+
+.filter-btn.active {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
+/* Import/Export button styles */
+.btn[title]{
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(0,0,0,0.05);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 8px;
+}
+
+.btn[title]:hover{transform: translateY(-3px)}
+
+.transactions-list {
+    max-height: 500px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+}
+
+.transactions-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.transactions-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.transactions-list::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 10px;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+}
+
+.transaction-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 10px;
+    border-left: 4px solid;
+    background: #f9fafb;
+    transition: all 0.3s ease;
+}
+
+.transaction-item:hover {
+    background: #f3f4f6;
+    transform: translateX(5px);
+}
+
+.transaction-item.income {
+    border-left-color: #10b981;
+}
+
+.transaction-item.expense {
+    border-left-color: #ef4444;
+}
+
+.transaction-details {
+    flex: 1;
+}
+
+.transaction-description {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.transaction-meta {
+    display: flex;
+    gap: 15px;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.transaction-category {
+    background: #e5e7eb;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.transaction-amount {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-right: 15px;
+}
+
+.transaction-item.income .transaction-amount {
+    color: #10b981;
+}
+
+.transaction-item.expense .transaction-amount {
+    color: #ef4444;
+}
+
+.delete-btn {
+    background: #fee;
+    color: #ef4444;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.delete-btn:hover {
+    background: #ef4444;
+    color: white;
+}
+
+/* Polishing: transitions for add/remove, and a subtle new-item highlight */
+.transaction-item {
+    will-change: transform, opacity, height;
+}
+
+.transaction-item.new {
+    animation: newPulse 900ms ease forwards;
+}
+
+/* Editing inline */
+.transaction-item.editing {
+    background: #fffef8;
+    border-left-color: #f59e0b;
+}
+.transaction-item .edit-input{
+    font-size: 1rem;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+}
+.action-btns{
+    display:flex; gap:8px; align-items:center;
+}
+.edit-btn, .save-btn, .cancel-btn{
+    padding:6px 10px; border-radius:6px; border:none; cursor:pointer; font-size:.9rem;
+}
+.edit-btn{background: #f3f4f6}
+.save-btn{background: #10b981; color:white}
+.cancel-btn{background:#ef4444;color:white}
+
+.transaction-item.remove {
+    opacity: 0;
+    transform: translateX(30px) scale(.99);
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+@keyframes newPulse {
+    0% { box-shadow: 0 10px 30px rgba(100,100,255,0.12); transform: translateY(4px); }
+    60% { box-shadow: 0 6px 18px rgba(100,100,255,0.06); transform: translateY(0); }
+    100% { box-shadow: none; }
+}
+
+/* Improve delete button to show as an icon-like pill on wide screens */
+.delete-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.delete-btn::before{
+    content: '🗑️';
+    display:inline-block;
+}
+
+/* Make amounts stand out more */
+.transaction-amount{
+    min-width: 110px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce){
+    .transaction-item, .transaction-item.new { animation: none; transition: none; }
+}
+
+.transactions-footer {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 2px solid #e5e7eb;
+}
+
+@media (max-width: 640px) {
+    header h1 {
+        font-size: 2rem;
+    }
+
+    .balance-section {
+        grid-template-columns: 1fr;
+    }
+
+    .transaction-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .transaction-amount {
+        margin-right: 0;
+    }
+}
+
+/* Emphasize primary buttons and charts container */
+.btn-primary{display:inline-flex;align-items:center;gap:10px;padding:10px 16px;background:linear-gradient(90deg,#ff8a65,#ff6b6b);color:#fff;border:none;border-radius:12px;cursor:pointer;box-shadow:0 10px 30px rgba(255,107,107,0.18);transition:transform 160ms ease,box-shadow 160ms ease;font-weight:700}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 14px 40px rgba(255,107,107,0.22)}
+.btn-primary:focus{outline:3px solid rgba(255,107,107,0.14)}
+
+#chartContainer{padding:12px;min-height:320px}
+#transactionsChart{max-width:100%;height:360px}
+
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+.chart-card{background:white;padding:14px;border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,0.08);cursor:pointer;transition:transform 160ms ease,box-shadow 160ms ease}
+.chart-card:hover{transform:translateY(-6px);box-shadow:0 18px 44px rgba(15,23,42,0.12)}
+.chart-card h3{margin:0 0 8px 0;font-size:1rem;color:#333}
+.chart-card canvas{width:100% !important; height:320px !important}
+
+@media (max-width:900px){ .charts-grid{grid-template-columns:1fr} .chart-card canvas{height:260px !important} }

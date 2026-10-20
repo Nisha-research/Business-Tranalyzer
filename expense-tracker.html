@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business Tracker & Analyzer</title>
+    <link rel="stylesheet" href="expense-style.css">
+        <!-- small SVG favicon (data URI) -->
+        <link rel="icon" href="file:///C:/Users/Nisha/OneDrive/Pictures/Screenshots/Screenshot%202025-10-04%20192010.png">
+    <!-- PapaParse for robust CSV parsing, Chart.js for charts -->
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="container">
+            <nav class="app-tabs" role="tablist" aria-label="Main navigation">
+                <button class="app-tab active" data-view="list" role="tab">Transactions</button>
+                <button class="app-tab" data-view="charts" role="tab">Charts</button>
+            </nav>
+        <header>
+            <h1> Business Tranalyzer</h1>
+            <p class="subtitle">Track payments, pending amounts, and business growth</p>
+        </header>
+
+        <div class="balance-section">
+            <div class="balance-card total-balance">
+                <h3>Total Balance</h3>
+                <p class="amount" id="totalBalance">₹0.00</p>
+            </div>
+            <div class="balance-card income">
+                <h3>Total Income</h3>
+                <p class="amount" id="totalIncome">₹0.00</p>
+            </div>
+            <div class="balance-card expense">
+                <h3>Total Expenses</h3>
+                <p class="amount" id="totalExpense">₹0.00</p>
+            </div>
+            <div class="balance-card expense">
+                <h3>Total Pending</h3>
+                <p class="amount" id="totalPending">₹0.00</p>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="form-section">
+                <h2>Add New Transaction</h2>
+                <form id="transactionForm">
+                    <div class="form-group">
+                        <label for="description">Description</label>
+                        <input type="text" id="description" placeholder="e.g., Grocery Shopping" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="amount">Amount</label>
+                        <input type="number" id="amount" step="0.01" placeholder="0.00" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="category">Vendor / Store</label>
+                        <div style="display:flex;gap:8px;align-items:center">
+                            <select id="category">
+                                <option value="">Select Vendor</option>
+                                <option value="ABC Shop">ABC Shop</option>
+                                <option value="XYZ Store">XYZ Store</option>
+                                <option value="PQR Mart">PQR Mart</option>
+                                <option value="Bills">Bills</option>
+                                <option value="Salary">Salary</option>
+                                <option value="Investment">Investment</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            <button id="manageVendors" type="button" class="btn" title="Manage vendors">Manage</button>
+                        </div>
+                    </div>
+
+                    <div id="vendorManager" class="form-group" style="display:none">
+                        <label>Vendors (comma separated)</label>
+                        <input type="text" id="vendorList" placeholder="ABC Shop,XYZ Store,PQR Mart">
+                        <div style="margin-top:8px;display:flex;gap:8px;"><button id="saveVendors" type="button" class="btn">Save Vendors</button><button id="cancelVendors" type="button" class="btn">Cancel</button></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="status">Status</label>
+                        <select id="status">
+                            <option value="paid">Paid</option>
+                            <option value="pending">Pending</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="type">Type</label>
+                        <select id="type" required>
+                            <option value="expense">Expense</option>
+                            <option value="income">Income</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="date">Date</label>
+                        <input type="date" id="date" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="dueDate">Due Date (optional)</label>
+                        <input type="date" id="dueDate">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="invoiceNo">Invoice / Bill No (optional)</label>
+                        <input type="text" id="invoiceNo" placeholder="Invoice or bill number">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="currency">Currency</label>
+                        <select id="currency">
+                            <option value="INR">INR</option>
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="attachment">Attach receipt / invoice (jpg/png/pdf, max 200KB)</label>
+                        <input type="file" id="attachment" accept="image/*,.pdf">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="recurring">Recurring</label>
+                        <select id="recurring">
+                            <option value="none">None</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="quarterly">Quarterly</option>
+                            <option value="yearly">Yearly</option>
+                            <option value="custom">Custom (every N)</option>
+                        </select>
+                        <div id="recurringCustomWrap" style="display:none;margin-top:8px">
+                            <label style="font-size:0.9rem">Every</label>
+                            <input id="recurringCustomNumber" type="number" min="1" value="1" style="width:72px;margin-left:6px;padding:6px" />
+                            <select id="recurringCustomUnit" style="margin-left:6px;padding:6px">
+                                <option value="days">day(s)</option>
+                                <option value="weeks">week(s)</option>
+                                <option value="months">month(s)</option>
+                            </select>
+                            <div style="font-size:0.85rem;color:#6b7280;margin-top:6px">Example: every 2 weeks, every 7 days</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="productId">Product ID / Bill No (optional)</label>
+                        <input type="text" id="productId" placeholder="Optional product id or bill no">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Add Transaction</button>
+                </form>
+            </div>
+
+            <div class="transactions-section">
+                        <div class="transactions-header" role="region" aria-label="Transaction history controls">
+                            <h2>Transaction History</h2>
+                            <div class="filter-buttons" role="tablist" aria-label="Filter transactions">
+                                <button class="filter-btn active" data-filter="all" role="tab">All</button>
+                                <button class="filter-btn" data-filter="income" role="tab">Income</button>
+                                <button class="filter-btn" data-filter="expense" role="tab">Expense</button>
+                            </div>
+                            <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+                                <button id="exportCsv" class="btn" title="Export transactions to CSV">Export CSV</button>
+                                <button id="importCsvBtn" class="btn" title="Import transactions from CSV">Import CSV</button>
+                                <input id="importFile" type="file" accept="text/csv" style="display:none" aria-hidden="true">
+                                <button id="toggleChart" class="btn" title="Toggle chart view">Show Chart</button>
+                                <button id="clearDrill" class="btn" title="Clear drill filter" style="display:none;">Clear Filter</button>
+                                <button id="exportFiltered" class="btn" title="Export filtered transactions" style="display:none;">Export Filtered CSV</button>
+                                <label title="Set dashboard tab icon" style="display:inline-block;margin-left:6px;">
+                                    <input id="dashboardFaviconInput" type="file" accept="image/*" style="display:inline-block"> Set Icon
+                                </label>
+                            </div>
+                        </div>
+
+                <div id="transactionsList" class="transactions-list" role="list" aria-live="polite">
+                    <div class="empty-state">
+                        <p>No transactions yet. Add your first transaction above!</p>
+                    </div>
+                </div>
+
+
+                <div id="undoArea" aria-live="assertive"></div>
+
+                <div class="transactions-footer">
+                    <button id="clearAll" class="btn btn-danger">Clear All Data</button>
+                </div>
+            </div>
+        </div>
+        <!-- chart container outside of transactions-section so it is visible independently -->
+        <div id="chartContainer" style="display:none; margin-top:18px;">
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3>Bar chart</h3>
+                    <canvas id="barChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Pie chart</h3>
+                    <canvas id="pieChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="expense-script.js"></script>
+</body>
+</html>
