@@ -41,6 +41,46 @@
   var saveVendorsBtn = document.getElementById('saveVendors');
   var cancelVendorsBtn = document.getElementById('cancelVendors');
   var dashboardFaviconInput = document.getElementById('dashboardFaviconInput');
+  var localStore = createStorageAdapter('localStorage', 'local storage');
+  var sessionStore = createStorageAdapter('sessionStorage', 'session storage');
+
+  function isQuotaExceededError(err){
+    return !!(err && (err.name === 'QuotaExceededError' || err.name === 'NS_ERROR_DOM_QUOTA_REACHED' || err.code === 22 || err.code === 1014));
+  }
+
+  function createStorageAdapter(storageName, friendlyName){
+    function getStorage(){
+      if(typeof window === 'undefined' || !window[storageName]) throw new Error(friendlyName + ' is unavailable in this browser context.');
+      return window[storageName];
+    }
+    function writeErrorMessage(err){
+      if(isQuotaExceededError(err)) return 'Unable to save data because browser storage is full. Export CSV to back up your data and clear some storage space.';
+      return 'Unable to save data because ' + friendlyName + ' is unavailable or blocked in this browser.';
+    }
+    return {
+      getItem: function(key){
+        try{ return getStorage().getItem(key); }catch(e){ return null; }
+      },
+      setItem: function(key, value, opts){
+        try{ getStorage().setItem(key, value); return true; }catch(e){ if(!opts || opts.notify !== false) showNotification((opts && opts.notifyErrorMessage) || writeErrorMessage(e), 'error'); return false; }
+      },
+      removeItem: function(key, opts){
+        try{ getStorage().removeItem(key); return true; }catch(e){ if(!opts || opts.notify !== false) showNotification((opts && opts.notifyErrorMessage) || ('Unable to update ' + friendlyName + '.'), 'error'); return false; }
+      },
+      getJSON: function(key, fallback, opts){
+        var raw = this.getItem(key);
+        if(raw === null || raw === '') return fallback;
+        try{ return JSON.parse(raw); }catch(e){
+          if(!opts || opts.notify !== false) showNotification((opts && opts.notifyParseErrorMessage) || 'Stored data was corrupted and could not be read.', 'error');
+          if(opts && opts.removeIfCorrupt) this.removeItem(key, { notify: false });
+          return fallback;
+        }
+      },
+      setJSON: function(key, value, opts){
+        try{ return this.setItem(key, JSON.stringify(value), opts); }catch(e){ if(!opts || opts.notify !== false) showNotification((opts && opts.notifyErrorMessage) || 'Unable to prepare data for saving.', 'error'); return false; }
+      }
+    };
+  }
 
   function init(){ loadTransactions(); setTodayDate(); bindEvents(); updateDisplay(); }
   // apply any pending drill filter after initialization
@@ -50,10 +90,9 @@
   // If user returned from dashboard drill, apply the drill filter
   function handleDrillFilterIfAny(){
     try{
-      var raw = sessionStorage.getItem('drill_filter');
-      if(!raw) return;
-      var drill = JSON.parse(raw);
-      sessionStorage.removeItem('drill_filter');
+      var drill = sessionStore.getJSON('drill_filter', null, { notifyParseErrorMessage: 'Dashboard filter data was invalid and has been ignored.', removeIfCorrupt: true });
+      if(!drill) return;
+      sessionStore.removeItem('drill_filter', { notify: false });
       // set view to list and apply filters
       Array.prototype.forEach.call(document.querySelectorAll('.app-tab'), function(b){ b.classList.remove('active'); });
       var listTab = document.querySelector('.app-tab[data-view="list"]'); if(listTab) listTab.classList.add('active');
@@ -148,7 +187,7 @@
     Array.prototype.forEach.call(document.querySelectorAll('.app-tab'), function(btn){ btn.addEventListener('click', function(){ Array.prototype.forEach.call(document.querySelectorAll('.app-tab'), function(b){ b.classList.remove('active'); }); btn.classList.add('active'); var view = btn.dataset.view; Array.prototype.forEach.call(document.querySelectorAll('.form-section, .transactions-section'), function(el){ el.style.display = view==='list' ? '' : 'none'; }); var chartContainer = document.getElementById('chartContainer'); if(chartContainer) chartContainer.style.display = view==='charts' ? 'block' : 'none'; if(view === 'charts') renderChart(); }); });
   }
 
-  function onDashboardFaviconSelected(e){ var f = e.target.files && e.target.files[0]; if(!f) return; if(f.size > 500*1024){ showNotification('Icon too large (max 500KB)','error'); e.target.value = ''; return; } var reader = new FileReader(); reader.onload = function(ev){ try{ sessionStorage.setItem('summary_dashboard_favicon', ev.target.result); showNotification('Dashboard icon saved (will apply on open)','success'); }catch(err){ showNotification('Failed to save icon: '+(err&&err.message||err),'error'); } }; reader.readAsDataURL(f); }
+  function onDashboardFaviconSelected(e){ var f = e.target.files && e.target.files[0]; if(!f) return; if(f.size > 500*1024){ showNotification('Icon too large (max 500KB)','error'); e.target.value = ''; return; } var reader = new FileReader(); reader.onload = function(ev){ if(sessionStore.setItem('summary_dashboard_favicon', ev.target.result, { notifyErrorMessage: 'Failed to save icon in session storage.' })) showNotification('Dashboard icon saved (will apply on open)','success'); }; reader.onerror = function(){ showNotification('Failed to read selected icon file.','error'); }; reader.readAsDataURL(f); }
 
   function applyTypeVisibility(){ var type = (typeInput && typeInput.value) || 'expense'; var catGroup = categoryInput && categoryInput.parentElement; var statusEl = document.getElementById('status'); var statusGroup = statusEl && statusEl.parentElement; if(type === 'income'){ if(catGroup) catGroup.style.display='none'; if(statusGroup) statusGroup.style.display='none'; if(categoryInput) categoryInput.disabled = true; if(statusEl) statusEl.disabled = true; } else { if(catGroup) catGroup.style.display=''; if(statusGroup) statusGroup.style.display=''; if(categoryInput) categoryInput.disabled = false; if(statusEl) statusEl.disabled = false; } }
 
@@ -162,8 +201,9 @@
     if(vendorManager) vendorManager.style.display = 'none'; showNotification('Vendors updated','success'); }
 
   // attachment: read as base64 but cap size to ~200KB
-  function onAttachmentSelected(e){ var f = e.target.files && e.target.files[0]; if(!f){ if(attachmentInput) attachmentInput._lastBase64 = null; return; } if(f.size > 200*1024){ showNotification('Attachment too large (max 200KB)','error'); e.target.value = ''; return; } var reader = new FileReader(); reader.onload = function(ev){ var data = ev.target.result; // keep data URL or base64
-      if(attachmentInput) attachmentInput._lastBase64 = data; showNotification('Attachment ready','success'); }; reader.readAsDataURL(f); }
+  function onAttachmentSelected(e){ var f = e.target.files && e.target.files[0]; if(!f){ if(attachmentInput) attachmentInput._lastBase64 = null; return; } if(f.size > 200*1024){ if(attachmentInput) attachmentInput._lastBase64 = null; showNotification('Attachment too large (max 200KB)','error'); e.target.value = ''; return; } var reader = new FileReader(); reader.onload = function(ev){ var data = ev.target.result; // keep data URL or base64
+      if(typeof data !== 'string'){ if(attachmentInput) attachmentInput._lastBase64 = null; showNotification('Attachment could not be read and was skipped.','error'); return; }
+      if(attachmentInput) attachmentInput._lastBase64 = data; showNotification('Attachment ready','success'); }; reader.onerror = function(){ if(attachmentInput) attachmentInput._lastBase64 = null; if(e && e.target) e.target.value = ''; showNotification('Attachment could not be read and was skipped.','error'); }; reader.readAsDataURL(f); }
 
   // recurring helper: returns next date string in ISO yyyy-mm-dd
   // freq can be: 'weekly', 'monthly', 'quarterly', 'yearly', or custom like 'custom:2:weeks' or 'custom:7:days'
@@ -214,17 +254,19 @@
     // Basic duplicate invoice check
     if(tx.invoiceNo){ var exists = transactions.some(function(t){ return t.invoiceNo && t.invoiceNo === tx.invoiceNo; }); if(exists){ if(!confirm('A transaction with this invoice number already exists. Save anyway?')) return; }}
 
+    var originalLength = transactions.length;
     transactions.push(tx);
     // recurring scheduling (simple): create next occurrence record
     if(tx.recurring && tx.recurring !== 'none'){ var next = nextRecurringDate(tx.date, tx.recurring); if(next){ var nextTx = Object.assign({}, tx); nextTx.id = generateId(); nextTx.date = next; nextTx.timestamp = Date.now(); transactions.push(nextTx); }}
 
-    saveTransactions(); updateDisplay();
+    var saved = saveTransactions(); updateDisplay();
+    if(!saved){ transactions.splice(originalLength); updateDisplay(); showNotification('Transaction added, but it could not be saved in browser storage. Export CSV to avoid losing this data on refresh.','error'); return; }
     if(transactionForm) transactionForm.reset(); setTodayDate(); if(attachmentInput) attachmentInput._lastBase64 = null; showNotification('Transaction added successfully!','success');
   }
 
   function onFilter(e){ Array.prototype.forEach.call(filterButtons, function(b){ b.classList.remove('active'); }); e.target.classList.add('active'); currentFilter = e.target.dataset.filter; displayTransactions(); }
 
-  function onClearAll(){ if(transactions.length === 0){ showNotification('No transactions to clear!','error'); return; } if(!confirm('Are you sure you want to delete all transactions?')) return; transactions = []; saveTransactions(); updateDisplay(); showNotification('All transactions cleared!','error'); }
+  function onClearAll(){ if(transactions.length === 0){ showNotification('No transactions to clear!','error'); return; } if(!confirm('Are you sure you want to delete all transactions?')) return; var previous = transactions.slice(); transactions = []; if(!saveTransactions()){ transactions = previous; return; } updateDisplay(); showNotification('All transactions cleared!','error'); }
 
   function generateId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2); }
 
@@ -276,9 +318,9 @@
     return html;
   }
 
-  function handleDeleteWithUndo(id, btn){ var container = btn.closest('.transaction-item'); if(!container) return; if(!confirm('Are you sure you want to delete this transaction?')) return; var tx = transactions.find(function(x){ return x.id === id; }); container.classList.add('remove'); lastDeleted = { item: tx, removedAt: Date.now() }; var cleanup = function(){ transactions = transactions.filter(function(x){ return x.id !== id; }); saveTransactions(); updateDisplay(); showUndoNotification(lastDeleted); }; container.addEventListener('transitionend', function tn(ev){ if(ev.propertyName === 'opacity'){ container.removeEventListener('transitionend', tn); cleanup(); } }); setTimeout(cleanup, 420); }
+  function handleDeleteWithUndo(id, btn){ var container = btn.closest('.transaction-item'); if(!container) return; if(!confirm('Are you sure you want to delete this transaction?')) return; var tx = transactions.find(function(x){ return x.id === id; }); container.classList.add('remove'); lastDeleted = { item: tx, removedAt: Date.now() }; var cleanup = function(){ var previous = transactions.slice(); transactions = transactions.filter(function(x){ return x.id !== id; }); if(!saveTransactions()){ transactions = previous; updateDisplay(); return; } updateDisplay(); showUndoNotification(lastDeleted); }; container.addEventListener('transitionend', function tn(ev){ if(ev.propertyName === 'opacity'){ container.removeEventListener('transitionend', tn); cleanup(); } }); setTimeout(cleanup, 420); }
 
-  function showUndoNotification(deleted){ var area = document.getElementById('undoArea'); if(!area) return; area.innerHTML = ''; var box = document.createElement('div'); box.style.cssText = 'background:#111;color:#fff;padding:10px 14px;border-radius:8px;display:inline-flex;gap:10px;align-items:center;'; box.textContent = 'Transaction deleted'; var undoBtn = document.createElement('button'); undoBtn.textContent = 'Undo'; undoBtn.style.cssText = 'background:#fff;color:#111;border-radius:6px;padding:6px 10px;border:none;cursor:pointer;'; undoBtn.addEventListener('click', function(){ if(!lastDeleted) return; transactions.push(lastDeleted.item); saveTransactions(); updateDisplay(); area.innerHTML = ''; lastDeleted = null; showNotification('Restore successful','success'); }); box.appendChild(undoBtn); area.appendChild(box); setTimeout(function(){ if(area.contains(box)) area.removeChild(box); lastDeleted = null; }, 6000); }
+  function showUndoNotification(deleted){ var area = document.getElementById('undoArea'); if(!area) return; area.innerHTML = ''; var box = document.createElement('div'); box.style.cssText = 'background:#111;color:#fff;padding:10px 14px;border-radius:8px;display:inline-flex;gap:10px;align-items:center;'; box.textContent = 'Transaction deleted'; var undoBtn = document.createElement('button'); undoBtn.textContent = 'Undo'; undoBtn.style.cssText = 'background:#fff;color:#111;border-radius:6px;padding:6px 10px;border:none;cursor:pointer;'; undoBtn.addEventListener('click', function(){ if(!lastDeleted) return; var previous = transactions.slice(); transactions.push(lastDeleted.item); if(!saveTransactions()){ transactions = previous; return; } updateDisplay(); area.innerHTML = ''; lastDeleted = null; showNotification('Restore successful','success'); }); box.appendChild(undoBtn); area.appendChild(box); setTimeout(function(){ if(area.contains(box)) area.removeChild(box); lastDeleted = null; }, 6000); }
 
   function renderChart(){
     var activeSub = document.querySelector('.chart-subtab.active');
@@ -377,13 +419,15 @@
     openDashboardWithOptions({ txns: txns });
   }
 
-  // Open dashboard.html in a new tab and pass options via localStorage.
+  // Open dashboard.html and pass options via sessionStorage.
   function openDashboardWithOptions(opts){
     try{
       opts = opts || {};
       var txns = opts.txns || transactions || [];
       var params = { metric: opts.metric || 'income', range: opts.range || 'month', year: opts.year || null, mode: opts.mode || null };
-  try{ sessionStorage.setItem('summary_transactions_temp', JSON.stringify(txns)); sessionStorage.setItem('summary_dashboard_params', JSON.stringify(params)); }catch(e){ showNotification('Unable to store temporary dashboard data: '+(e && e.message || e),'error'); return; }
+  var txnsStored = sessionStore.setJSON('summary_transactions_temp', txns, { notifyErrorMessage: 'Unable to store temporary dashboard data in session storage.' });
+  var paramsStored = sessionStore.setJSON('summary_dashboard_params', params, { notifyErrorMessage: 'Unable to store dashboard options in session storage.' });
+  if(!txnsStored || !paramsStored) return;
   // navigate in the same tab so browser back button returns to tracker
   try{ window.location.assign('dashboard.html'); }catch(err){ showNotification('Failed to open dashboard: '+(err&&err.message||err),'error'); }
     }catch(e){ showNotification('Failed to open dashboard: '+(e && e.message || e),'error'); }
@@ -411,8 +455,10 @@
           timestamp: parseInt(row.timestamp) || Date.now()
         };
       });
+      var previous = transactions.slice();
       transactions = transactions.concat(newTx);
-      saveTransactions(); updateDisplay();
+      if(!saveTransactions()){ transactions = previous; return; }
+      updateDisplay();
       return;
     }
     var lines = text.split(/\r?\n/).map(function(l){ return l.trim(); }).filter(Boolean);
@@ -424,7 +470,8 @@
       header.forEach(function(h,idx){ tx[h] = cols[idx] || ''; });
       if(!tx.id) tx.id = generateId(); tx.amount = parseFloat(tx.amount) || 0; tx.timestamp = parseInt(tx.timestamp) || Date.now(); if(!tx.description || !tx.date) continue; tx.currency = tx.currency || 'INR'; tx.dueDate = tx.dueDate || ''; tx.invoiceNo = tx.invoiceNo || ''; tx.recurring = tx.recurring || 'none'; tx.attachment = null; newTx.push(tx);
     }
-    transactions = transactions.concat(newTx); saveTransactions(); updateDisplay();
+    var previous = transactions.slice();
+    transactions = transactions.concat(newTx); if(!saveTransactions()){ transactions = previous; return; } updateDisplay();
   }
 
   function onFileSelected(e){ var file = e.target.files && e.target.files[0]; if(!file) return; var reader = new FileReader(); reader.onload = function(ev){ try{ importCSVString(ev.target.result); showNotification('Import completed', 'success'); }catch(err){ showNotification('Failed to import CSV: ' + err.message, 'error'); } }; reader.readAsText(file); e.target.value=''; }
@@ -444,8 +491,20 @@
   function formatCurrency(amount, currency){ var val = Number(amount||0).toFixed(2); if(!currency || currency === 'INR') return '₹' + val; return currency + ' ' + val; }
   function formatDate(d){ try{ return new Date(d).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' }); }catch(e){ return d; } }
 
-  function saveTransactions(){ localStorage.setItem('transactions', JSON.stringify(transactions)); }
-  function loadTransactions(){ var s = localStorage.getItem('transactions'); if(s) transactions = JSON.parse(s); }
+  function saveTransactions(){ return localStore.setJSON('transactions', transactions); }
+  function loadTransactions(){
+    var loaded = localStore.getJSON('transactions', [], {
+      notifyParseErrorMessage: 'Saved transaction data was corrupted and has been reset. Import a CSV backup if needed.',
+      removeIfCorrupt: true
+    });
+    if(!Array.isArray(loaded)){
+      showNotification('Saved transaction data format was invalid and has been reset. Import a CSV backup if needed.','error');
+      localStore.removeItem('transactions', { notify: false });
+      transactions = [];
+      return;
+    }
+    transactions = loaded;
+  }
 
   function showNotification(message, type){ if(type===undefined) type='success'; var notification = document.createElement('div'); notification.style.cssText = 'position: fixed; top: 20px; right: 20px; padding: 15px 25px; background: ' + (type === 'success' ? '#10b981' : '#ef4444') + '; color: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index:1000;'; notification.textContent = message; document.body.appendChild(notification); setTimeout(function(){ notification.remove(); }, 2200); }
 
@@ -453,7 +512,7 @@
 
   function exitEditMode(id){ var el = document.querySelector('.transaction-item[data-id="' + id + '"]'); if(!el) return; var tx = transactions.find(function(t){ return t.id === id; }); if(!tx) return; el.classList.remove('editing'); el.querySelector('.transaction-description').textContent = tx.description; el.querySelector('.transaction-category').textContent = tx.category; el.querySelector('.transaction-date').textContent = formatDate(tx.date); el.querySelector('.transaction-amount').textContent = (tx.type==='income'?'+':'-') + formatCurrency(tx.amount); Array.prototype.forEach.call(el.querySelectorAll('.save-btn, .cancel-btn'), function(b){ b.style.display='none'; b.setAttribute('aria-hidden','true'); }); Array.prototype.forEach.call(el.querySelectorAll('.edit-btn'), function(b){ b.style.display='inline-block'; }); }
 
-  function saveEdit(id){ var el = document.querySelector('.transaction-item[data-id="' + id + '"]'); if(!el) return; var inputs = el.querySelectorAll('.edit-input'); var tx = transactions.find(function(t){ return t.id === id; }); if(!tx) return; Array.prototype.forEach.call(inputs, function(input){ var field = input.dataset.field; if(field === 'amount') tx[field] = parseFloat(input.value) || 0; else tx[field] = input.value; }); tx.timestamp = Date.now(); saveTransactions(); updateDisplay(); showNotification('Transaction updated','success'); }
+  function saveEdit(id){ var el = document.querySelector('.transaction-item[data-id="' + id + '"]'); if(!el) return; var inputs = el.querySelectorAll('.edit-input'); var tx = transactions.find(function(t){ return t.id === id; }); if(!tx) return; var previous = Object.assign({}, tx); Array.prototype.forEach.call(inputs, function(input){ var field = input.dataset.field; if(field === 'amount') tx[field] = parseFloat(input.value) || 0; else tx[field] = input.value; }); tx.timestamp = Date.now(); if(!saveTransactions()){ Object.keys(previous).forEach(function(k){ tx[k] = previous[k]; }); return; } updateDisplay(); showNotification('Transaction updated','success'); }
 
   function escapeHtml(str){ return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   function escapeJs(s){ return String(s||'').replace(/\\/g,'\\\\').replace(/"/g,'\\"').replace(/\'/g,"\\'"); }
